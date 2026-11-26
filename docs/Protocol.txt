@@ -1,0 +1,63 @@
+WristLink source
+
+WristLink is a local Windows Bluetooth LE to OSC bridge. The desktop application
+uses Tk, Bleak's WinRT backend, psutil and python-osc. See the included Quick
+Start for device setup, VRChat mappings, sampling profiles and wrist reminders.
+
+Run from source in PowerShell with 64-bit Python 3.12
+
+    py -3.12 -m venv .venv
+    .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+    .\.venv\Scripts\python.exe -m unittest -v test_bridge
+    .\.venv\Scripts\python.exe wristlink.py
+
+Run build.ps1 from PowerShell to create dist\WristLink.exe. The build uses
+PyInstaller and includes the Windows Runtime modules and the Tk runtime.
+The executable uses UDP for OSC and WinRT for BLE. The build omits the
+optional OpenSSL modules.
+
+Device protocol
+
+bridge.py implements the Brookstone channel from the actual LA380 GATT
+service and characteristics. It subscribes to notifications, opens a FitPro BLE
+session, requests a heart-only measurement (group 0x12, key 0x24), waits for its
+acknowledgement and decodes a single heart record (group 0x15, key 0x04). It
+acknowledges the record and suppresses duplicate device timestamps. In
+Continuous, one client and one notification subscription span measurements.
+Only one optical request is in flight. When one times out after 22 seconds,
+the driver stops that request and retries on the same link. Wrist alerts also
+use the same link. The other profiles release the client between spot checks.
+A monotonic timer limits optical starts. The heart-rate byte follows the four-byte seconds field.
+The decoder reassembles BLE notifications and processes queued results before
+disconnect teardown. OSC periodically repeats a fresh value for late listeners.
+Only new physical readings enter the database.
+New LA380 readings retain the original FitPro frame, device stamp and OSC
+hold decision. On restart, recent device stamps repopulate duplicate detection.
+The dashboard and pulse comparison use raw estimates. A configurable check on
+abrupt transitions applies solely to avatar output. See the Quick Start for
+the timing, thresholds and raw CSV fields.
+The driver also supports standard HRS 0x180D / 0x2A37 notifications and handles
+both BPM widths and the contact flags. Hardware verification used the Brookstone.
+
+Discovery checks advertisements and paired Windows devices and verifies the
+LA380 model. The band address is learned at runtime. Continuous is the default
+with or without a local OSC listener. It pairs the verified LA380 with Windows,
+can resolve a paired device directly, and targets up to one optical start per
+second. The band sets the achievable cadence. While an accepted sample is fresh,
+OSC repeats it about once per second. The history retains only real readings.
+Per-device link events distinguish an optical timeout from a dropped connection.
+wristlink.py schedules sampling, haptic reminders and UI updates. history.py
+stores per-device measurements in SQLite and estimates discharge from observed
+charge levels. plot.py draws the timeline and battery charts. Local history
+and preferences live under %LOCALAPPDATA%\WristLink.
+
+References for interoperability
+
+FitPro command construction, including the heart-only request
+https://github.com/ricalgarve/r-watch/blob/223140c904e420ce0c40717f3b239c0c8187dba7/reference_java/sources/xfkj/fitpro/bluetooth/SendData.java
+
+FitPro sport data decoder for single heart-rate records
+https://github.com/ricalgarve/r-watch/blob/223140c904e420ce0c40717f3b239c0c8187dba7/reference_java/sources/xfkj/fitpro/bluetooth/revData/BaseReceiveData.java
+
+Bluetooth Heart Rate Service
+https://www.bluetooth.com/specifications/specs/heart-rate-service-1-0/

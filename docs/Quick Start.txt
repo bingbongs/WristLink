@@ -1,0 +1,150 @@
+WristLink for Windows
+Brookstone LA380 heart-rate band • Windows x64 with Bluetooth LE
+
+Getting started
+
+1. Unzip the Windows download and open WristLink.exe.
+2. Wear the band and wake it near the PC. WristLink checks for nearby bands
+   and Brookstone bands already paired with Windows. It verifies the LA380
+   model over Bluetooth. If one band matches, it connects automatically. If
+   there are several, choose yours in Sensors. Continuous mode requests Windows
+   pairing so it can keep using the same band between readings.
+3. In VRChat, open Action Menu → OSC → OSC Debug. This enables OSC and shows
+   incoming values. An avatar that displays BPM needs a matching parameter or
+   heart-rate prefab. WristLink on its own can display and record readings.
+
+Mini switches to a small status window with BPM, sample age, battery and the
+next check. Expand restores the dashboard. WristLink remembers your view.
+
+How often the sensor runs
+
+The default is “Continuous · 1 second” with “Use selected rate” outside local
+OSC. WristLink keeps one Bluetooth connection open and starts the next optical
+request as soon as the previous reading arrives, up to once per second. The
+LA380 needs several seconds to produce a fresh estimate. While a reading is
+fresh and accepted, OSC updates about once per second. The timeline records
+only new measurements. The band keeps measuring with VRChat closed.
+
+The dashboard shows time on the current link and the interval between actual
+readings. If an optical request stalls, WristLink retries on the same link.
+If the Bluetooth link actually drops, it tries to reconnect automatically and
+can use the Windows pairing even while the band is no longer advertising.
+
+                          In-session target          Maximum optical requests
+    Responsive            Every 15 seconds           240 per hour
+    Battery saver         Every 60 seconds            60 per hour
+    Endurance             Every 5 minutes             12 per hour
+    Optional background   Every 15 minutes             4 per hour
+
+These slower modes release the band between spot checks to save power. In
+Settings, “Outside local OSC” can also pause or reduce sampling when the local
+port is idle. A remote OSC destination always uses the selected
+rate because WristLink can only inspect UDP listeners on this PC. Pause suspends
+heart-rate sampling. Scheduled wrist reminders remain available. Closing the
+app ends both. The band's own firmware may perform its own periodic measurements.
+
+Timeline, export and battery
+
+Timeline shows timestamped sensor readings. Use the range selector and arrows
+to inspect an earlier period, or hover over a point to read its value and time.
+The initial range is one hour. “Last recorded” means the displayed value is
+from history or its live signal expired. Check the sample time and the retry
+status below the chart. Two separate measurements can have the same BPM.
+“Band estimate” is the BPM reported by the band. The LA380 heart record
+provides a BPM and device timestamp. WristLink has no verified skin-contact
+or optical signal-quality measure in this record.
+
+Check pulse opens a timed comparison. Wear the band, sit still, select Start,
+and count your pulse for 60 seconds. During that minute WristLink uses the
+15-second sampling target, or continues at your selected rate if faster. Enter your
+beat count to compare it with the median of the raw band readings acquired
+entirely within the same minute. The result includes the number and range of
+samples. Fewer than two samples gives an inconclusive check. Pulse counts
+entered here apply only to the comparison.
+
+Export CSV includes saved heart-rate readings, battery reports, optical
+requests and connection events for the selected device. A sample timeout is an
+optical retry. A link loss records an actual Bluetooth interruption. Times in
+the CSV include UTC offsets.
+New LA380 rows also include the original Bluetooth heart record and whether
+WristLink held that sample back from OSC. Earlier records retain their values.
+During rapid sampling the band reports charge at most once every five minutes
+unless you switch sampling intervals. Each optical check still has its own time.
+
+Battery shows reported charge, a charge history, optical requests, successful
+readings and mean time from the measurement request to its result. Profile tiles
+show hourly request budgets. “Learning” is expected while the gauge stays flat.
+
+An estimate requires an observed discharge spanning at least six hours, a drop
+of at least ten percentage points, and three distinct gauge levels. A gauge rise
+or a gap over two hours starts a new segment. Remaining time and full-charge
+equivalent use the recent observed drain. Each profile needs qualifying data at
+its own interval before it shows a profile-specific full-charge estimate. The
+comparison uses observations from the past seven days. Wear, battery age and
+the band's own activities can change runtime.
+
+Reminders
+
+Set a countdown timer or a daily bedtime in local 24-hour time. Test vibration
+requests a short find-band cue. These are PC-scheduled wrist alerts. Keep
+WristLink open, the PC awake, and the band nearby. An alert more than two minutes
+overdue is marked missed. A Bluetooth acknowledgement confirms the command
+reached the band. On a continuous LA380 connection the reminder uses the
+existing link. The wearer confirms the motor response.
+
+VRChat OSC
+
+The default destination is 127.0.0.1 on UDP port 9000.
+Each name below is prefixed with /avatar/parameters/.
+
+    HeartRate                  Int       BPM, capped at 255 for VRChat
+    HeartRateActive            Bool      A recent reading is available
+    HR                         Int       Common prefab BPM
+    Heartrate3                 Int       Mi Band OSC-compatible BPM
+    VRCOSC/Heartrate/Value      Int       VRCOSC-compatible BPM
+    onesHR, tensHR, hundredsHR  Int       Decimal digits for counter prefabs
+
+The last four lines are optional compatibility outputs. Settings lets you change
+the primary BPM name, select Float for BPM/255, change the signal parameter or
+disable aliases. Custom assignments take precedence. WristLink sends measured
+BPM. Prefabs that require beat-by-beat pulse events need a separate beat source.
+
+During Continuous, Responsive and Battery saver sampling, the default OSC jump check uses
+two recent readings that agree within 10 BPM. A new estimate at least 20 BPM
+away from both is held for confirmation. The raw value appears on the dashboard
+as “Band · OSC held” and is saved in the timeline. The signal parameter goes
+false. A second recent sample within 10 BPM of the held value allows its own
+value through. A return to the prior level also resumes output. The comparison
+resets after a long gap. This rule can delay a genuine rapid change. Turn off
+“Confirm abrupt LA380 changes” in Settings for direct raw OSC output.
+
+While an OSC receiver is listening, WristLink repeats the current measurement
+about once per second in Continuous or every four seconds in the other profiles.
+Only a new measurement adds a point to the timeline. LA380 data expires after the sampling
+interval plus 30 seconds, capped at 90 seconds. WristLink then sends a false
+HeartRateActive signal and leaves the last BPM in place. Avatars can use the
+signal parameter to indicate stale data. In Continuous an actual link loss also
+clears the active signal. Pausing or closing clears the output. Standard Bluetooth Heart
+Rate Service devices can be selected manually. During an active session they
+stream their own notifications. Brookstone optical budgets apply to the LA380.
+
+Your data and troubleshooting
+
+Preferences and local history are stored per Windows user under
+%LOCALAPPDATA%\WristLink. History stays in history.sqlite3 on this PC across
+restarts. The Windows ZIP contains no personal history, addresses or settings.
+OSC goes only to the destination configured in the app.
+
+If a first scan misses the band, keep it awake nearby. WristLink retries. If
+another app is connected to it, disconnect that app and use Sensors to rescan.
+If OSC Debug shows BPM but your avatar stays still, match its parameter name,
+type and animation configuration. This build was tested on one physical LA380
+reporting firmware V35960. Other units of the model are detected by model ID.
+
+References
+
+https://docs.vrchat.com/docs/osc-debugging
+https://docs.vrchat.com/docs/osc-avatar-parameters
+https://github.com/DangerKiddy/HeartRateMonitorVRC
+https://github.com/hizkifw/HeartOSC
+https://github.com/vard88508/vrc-osc-miband-hrm
